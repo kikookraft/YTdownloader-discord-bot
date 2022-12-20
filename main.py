@@ -1,13 +1,15 @@
 import interactions # pip install -U discord-py-interactions
+from interactions.ext.files import command_edit
 import asyncio # lib already installed
-from pytube import YouTube # pip install pytube3
+import youtube_dl # pip install youtube_dl
+# pip install -U interactions-files
 
 with open('key', 'r') as f:
     bot_key = f.read()
 
 bot = interactions.Client(token=bot_key, default_scope=704297527557619772)
 
-
+# shutdown command
 @bot.command(
     name = "shutdown",
     description = "Shuts down the bot")
@@ -17,6 +19,26 @@ async def shutdown(ctx: interactions.CommandContext):
     await bot._logout()
     exit()
 
+# ping command
+@bot.command(
+    name="ping",
+    description="Pings the bot")
+async def ping(ctx: interactions.CommandContext):
+    await ctx.send("Pong!")
+
+# restart command
+@bot.command(
+    name="restart",
+    description="Restarts the bot")
+async def restart(ctx: interactions.CommandContext):
+    await ctx.send("Restarting...")
+    import sys
+    print("argv was",sys.argv)
+    print("sys.executable was", sys.executable)
+    print("restart now")
+    import os
+    os.execv(sys.executable, ['python'] + sys.argv)
+    
 
 @bot.command()
 @interactions.option()
@@ -36,22 +58,22 @@ async def download(ctx: interactions.CommandContext, link: str):
     CAN TAKE A WHILE TO DOWNLOAD"""
     await ctx.defer()
     
-    # download the video
-    # video_info = youtube_dl.YoutubeDL().extract_info(url = link,download=True)
-    # filename = f"download/{video_info['title']}.mp3"
-    # options={
-    #     'format':'bestaudio/good',
-    #     'keepvideo':False,
-    #     'outtmpl':filename,
-    # }
-    # with youtube_dl.YoutubeDL(options) as ydl:
-    #     ydl.download([video_info['webpage_url']])
     try:
-        yt = YouTube(link).streams.filter(only_audio=True, file_extension="mp3").first()
-        yt.download(output_path=f"download\\{yt.default_filename}.mp3")
-        await ctx.send(f"Downloaded {yt.title} !")
-    except AttributeError as e:
-        await ctx.send(f"Cant download audio from this link!\n{e}")
+        video_info = youtube_dl.YoutubeDL().extract_info(url = link,download=False)
+        filename = f"download/{video_info['title']}.mp3"
+        options={
+            'format':'bestaudio/best',
+            'keepvideo':False,
+            'outtmpl':filename,
+        }
+        await ctx.send(f"Downloading _{video_info['title']}_...\n_This may take a while..._")
+        with youtube_dl.YoutubeDL(options) as ydl:
+            ydl.download([video_info['webpage_url']])
+        file = interactions.File(filename)
+        await command_edit(content=f"{ctx.user.mention} Downloaded _{video_info['title']}_!",files=file, ctx=ctx)
+        
+    except youtube_dl.utils.DownloadError:
+        await ctx.send(f"Cant download audio from this link!")
         
     
 
